@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSE Division C Timetable Generator</title>
+    <style>
+        /* Motion Background */
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            text-align: center;
+            overflow-x: hidden;
+        }
+
+        #background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at center, #1a1a1a, #000);
+        }
+
+        .line {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, #49a09d, transparent);
+            animation: moveLines 3s infinite linear;
+        }
+
+        @keyframes moveLines {
+            from {
+                transform: translateY(-100%);
+            }
+            to {
+                transform: translateY(100%);
+            }
+        }
+
+        /* Content Styling */
+        h1 {
+            font-size: 2.5em;
+            margin: 20px;
+            animation: fadeIn 1s ease;
+        }
+
+        .controls {
+            margin: 20px;
+        }
+
+        select, button, label {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        select {
+            background-color: #333;
+            color: #fff;
+        }
+
+        button {
+            background-color: #49a09d;
+            color: #fff;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .timetable-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+            width: 90%;
+            max-width: 1200px;
+        }
+
+        .timetable {
+            width: 100%;
+            border-collapse: collapse;
+            display: none;
+            animation: fadeInTable 1.5s ease;
+        }
+
+        .timetable th, .timetable td {
+            border: 1px solid #49a09d;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .timetable th {
+            background: rgba(73, 160, 157, 0.3);
+            font-weight: bold;
+        }
+
+        .timetable td {
+            background: rgba(73, 160, 157, 0.1);
+        }
+
+        .fade {
+            display: table;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeInTable {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="background"></div>
+
+    <h1>Class C Timetable Generator</h1>
+
+    <div class="controls">
+        <label for="batch">Select Batch:</label>
+        <select id="batch">
+            <option value="Batch-1">Batch-1</option>
+            <option value="Batch-2">Batch-2</option>
+            <option value="Batch-3">Batch-3</option>
+            <option value="Batch-4">Batch-4</option>
+            <option value="Batch-5">Batch-5</option>
+            <option value="Batch-6">Batch-6</option>
+        </select>
+
+        <label for="day">Select Day:</label>
+        <select id="day">
+            <option value="Monday">Monday</option>
+            <option value="Tuesday">Tuesday</option>
+            <option value="Wednesday">Wednesday</option>
+            <option value="Thursday">Thursday</option>
+            <option value="Friday">Friday</option>
+            <option value="Saturday">Saturday</option>
+        </select>
+
+        <button onclick="generateTimetable()">Generate Timetable</button>
+        <button onclick="downloadExcel()">Download Excel</button>
+    </div>
+
+    <div class="timetable-container">
+        <table id="timetable" class="timetable">
+            <thead>
+                <tr>
+                    <th>Time Slot</th>
+                    <th>Subject</th>
+                    <th>Room</th>
+                    <th>Instructor</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Create motion lines
+        for (let i = 0; i < 100; i++) {
+            const line = document.createElement("div");
+            line.className = "line";
+            line.style.left = `${Math.random() * 100}vw`;
+            line.style.animationDelay = `${Math.random() * 3}s`;
+            line.style.animationDuration = `${2 + Math.random() * 2}s`;
+            document.getElementById("background").appendChild(line);
+        }
+
+        const timetableData = {
+            "Batch-1": {
+                "Monday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "12:10 PM - 01:00 PM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "01:00 PM - 01:50 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" }
+                ],
+                "Tuesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" }
+                ],
+                "Wednesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-103", instructor: "PBV" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-102", instructor: "PBV" }
+                ],
+                "Thursday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RBG" },
+                    { time: "09:50 AM - 10:40 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "10:40 AM - 11:30 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "12:10 PM - 01:00 PM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "01:00 PM - 01:50 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" }
+                ],
+                "Friday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (Lecture)", room: "AUD-6", instructor: "SRM" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RGB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" }
+                ],
+                "Saturday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "08:40 AM - 09:35 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "--", room: "--", instructor: "--" },
+                    { time: "01:00 PM - 01:50 AM", subject: "--", room: "--", instructor: "--" }
+                ]
+            },
+            "Batch-3": {
+                "Monday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "12:10 PM - 01:00 PM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "01:00 PM - 01:50 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" }
+                ],
+                "Tuesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" }
+                ],
+                "Wednesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: ".NET (Lecture)", room: "AUD-4", instructor: "NRV" },
+                    { time: "08:40 AM - 09:35 AM", subject: ".NET (Lecture)", room: "AUD-4", instructor: "NRV" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PS (Tutorial)", room: "A-104", instructor: "PJB" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PS (Tutorial)", room: "A-104", instructor: "PJB" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-103", instructor: "PBV" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-102", instructor: "PBV" }
+                ],
+                "Thursday": [
+                    { time: "07:45 AM - 08:40 AM", subject: ".NET (Lecture)", room: "AUD-4", instructor: "NRV" },
+                    { time: "08:40 AM - 09:35 AM", subject: ".SE (Lecture)", room: "AUD-6", instructor: "RGB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "10:40 AM - 11:30 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PP (LAB)", room: "H-203", instructor: "SRM,RUTUL,HENSI" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PP (LAB)", room: "H-203", instructor: "SRM,RUTUL,HENSI" }
+                ],
+                "Friday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (Lecture)", room: "AUD-6", instructor: "SRM" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RGB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PC-I (LAB)", room: "C-312", instructor: "TDR" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PC-I (LAB)", room: "C-312", instructor: "TDR" },
+                    { time: "12:10 PM - 01:00 PM", subject: ".NET (LAB)", room: "H-203", instructor: "NRV,PINAL,RONAK" },
+                    { time: "01:00 PM - 01:50 AM", subject: ".NET (LAB)", room: "H-203", instructor: "NRV,PINAL,RONAK" }
+                ],
+                "Saturday": [
+                    { time: "07:45 AM - 08:40 AM", subject: ".NET (LAB)", room: "H-203", instructor: "NRV,ABHAY," },
+                    { time: "08:40 AM - 09:35 AM", subject: ".NET (LAB)", room: "H-203", instructor: "NRV,ABHAY" },
+                    { time: "09:50 AM - 10:40 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "10:40 AM - 11:30 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "12:10 PM - 01:00 PM", subject: "--", room: "--", instructor: "--" },
+                    { time: "01:00 PM - 01:50 AM", subject: "--", room: "--", instructor: "--" }
+                ]
+            },
+            "Batch-2": {
+                "Monday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "12:10 PM - 01:00 PM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "01:00 PM - 01:50 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" }
+                ],
+                "Tuesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" }
+                ],
+                "Wednesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-103", instructor: "PBV" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-102", instructor: "PBV" }
+                ],
+                "Thursday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RBG" },
+                    { time: "09:50 AM - 10:40 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "10:40 AM - 11:30 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "12:10 PM - 01:00 PM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "01:00 PM - 01:50 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" }
+                ],
+                "Friday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (Lecture)", room: "AUD-6", instructor: "SRM" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RGB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" }
+                ],
+                "Saturday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "08:40 AM - 09:35 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "--", room: "--", instructor: "--" },
+                    { time: "01:00 PM - 01:50 AM", subject: "--", room: "--", instructor: "--" }
+                ]
+            },
+            "Batch-4": {
+                "Monday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "12:10 PM - 01:00 PM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "01:00 PM - 01:50 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" }
+                ],
+                "Tuesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" }
+                ],
+                "Wednesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-103", instructor: "PBV" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-102", instructor: "PBV" }
+                ],
+                "Thursday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RBG" },
+                    { time: "09:50 AM - 10:40 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "10:40 AM - 11:30 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "12:10 PM - 01:00 PM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "01:00 PM - 01:50 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" }
+                ],
+                "Friday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (Lecture)", room: "AUD-6", instructor: "SRM" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RGB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" }
+                ],
+                "Saturday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "08:40 AM - 09:35 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "--", room: "--", instructor: "--" },
+                    { time: "01:00 PM - 01:50 AM", subject: "--", room: "--", instructor: "--" }
+                ]
+            },
+            "Batch-5": {
+                "Monday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "12:10 PM - 01:00 PM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "01:00 PM - 01:50 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" }
+                ],
+                "Tuesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" }
+                ],
+                "Wednesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-103", instructor: "PBV" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-102", instructor: "PBV" }
+                ],
+                "Thursday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RBG" },
+                    { time: "09:50 AM - 10:40 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "10:40 AM - 11:30 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "12:10 PM - 01:00 PM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "01:00 PM - 01:50 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" }
+                ],
+                "Friday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (Lecture)", room: "AUD-6", instructor: "SRM" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RGB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" }
+                ],
+                "Saturday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "08:40 AM - 09:35 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "--", room: "--", instructor: "--" },
+                    { time: "01:00 PM - 01:50 AM", subject: "--", room: "--", instructor: "--" }
+                ]
+            },
+            "Batch-6": {
+                "Monday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "12:10 PM - 01:00 PM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "01:00 PM - 01:50 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" }
+                ],
+                "Tuesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "WT-II (Lecture)", room: "AUD-6", instructor: "AVB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (Lecture)", room: "AUD-4", instructor: "RGB" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PP (Lecture)", room: "AUD-4", instructor: "SRM" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-101", instructor: "PJB" }
+                ],
+                "Wednesday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "10:40 AM - 11:30 AM", subject: "PS (Tutorial)", room: "A-102", instructor: "PBV" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PS (Lecture)", room: "G-103", instructor: "PBV" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PS (Lecture)", room: "G-102", instructor: "PBV" }
+                ],
+                "Thursday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "MADF (Lecture)", room: "AUD-5", instructor: "MDB" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RBG" },
+                    { time: "09:50 AM - 10:40 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "10:40 AM - 11:30 AM", subject: "WT-II (LAB)", room: "H-202", instructor: "AVB,JENISH" },
+                    { time: "12:10 PM - 01:00 PM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "01:00 PM - 01:50 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" }
+                ],
+                "Friday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (Lecture)", room: "AUD-6", instructor: "SRM" },
+                    { time: "08:40 AM - 09:35 AM", subject: "SE (Lecture)", room: "AUD-6", instructor: "RGB" },
+                    { time: "09:50 AM - 10:40 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "MADF (LAB)", room: "H-403", instructor: "MDB,DUSHYANT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" },
+                    { time: "01:00 PM - 01:50 AM", subject: "PC-I (Tutorial)", room: "C-312", instructor: "RRU" }
+                ],
+                "Saturday": [
+                    { time: "07:45 AM - 08:40 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "08:40 AM - 09:35 AM", subject: "PP (LAB)", room: "H-205", instructor: "SRM,GOPI,AYUSH" },
+                    { time: "09:50 AM - 10:40 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "10:40 AM - 11:30 AM", subject: "SE (LAB)", room: "H-203", instructor: "RGB,PREESHA,AKSHAT" },
+                    { time: "12:10 PM - 01:00 PM", subject: "--", room: "--", instructor: "--" },
+                    { time: "01:00 PM - 01:50 AM", subject: "--", room: "--", instructor: "--" }
+                ]
+            },
+        };
+
+        function generateTimetable() {
+            const batch = document.getElementById("batch").value;
+            const day = document.getElementById("day").value;
+            const timetable = document.getElementById("timetable");
+            const tbody = timetable.querySelector("tbody");
+
+            tbody.innerHTML = ""; // Clear previous data
+            timetable.classList.remove('fade');
+
+            if (timetableData[batch] && timetableData[batch][day]) {
+                timetableData[batch][day].forEach(slot => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `<td>${slot.time}</td><td>${slot.subject}</td><td>${slot.room}</td><td>${slot.instructor}</td>`;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4">No timetable available for the selected batch and day.</td></tr>`;
+            }
+
+            timetable.classList.add('fade');
+        }
+
+        function downloadExcel() {
+            const batch = document.getElementById("batch").value;
+            const day = document.getElementById("day").value;
+            const timetable = document.getElementById("timetable");
+
+            const ws = XLSX.utils.table_to_sheet(timetable);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Timetable");
+
+            let filename = `CSE-${batch}-${day}.xlsx`;
+            XLSX.writeFile(wb, filename);
+        }
+    </script>
+</body>
+</html>
